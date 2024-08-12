@@ -3,10 +3,12 @@ from nba_api.stats.endpoints import (
     playercareerstats,
     leaguedashplayerstats,
 )
+from nba_api.stats.static import teams
+from nba_api.stats.static import players
+
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
-from nba_api.stats.static import teams
 
 
 def fetch_team_performance_data(season="2023-24"):
@@ -53,9 +55,6 @@ def fetch_team_performance_data(season="2023-24"):
     team_stats = pd.merge(team_stats_numeric, team_names, on="TEAM_ID", how="left")
     team_stats = pd.merge(team_stats, team_wl, on="TEAM_ID", how="left")
 
-    # Print the merged DataFrame to verify
-    print(team_stats.head())
-
     # Features for clustering
     features = [
         "FGM",
@@ -97,7 +96,32 @@ def fetch_team_performance_data(season="2023-24"):
 
 def fetch_player_career_stats(player_id):
     career = playercareerstats.PlayerCareerStats(player_id=player_id)
-    return career.get_data_frames()[0]
+    career_stats = career.get_data_frames()[0]
+
+    # Calculate per game stats
+    per_game_stats = career_stats.copy()
+    per_game_stats["PTS"] = per_game_stats["PTS"] / per_game_stats["GP"]
+    per_game_stats["REB"] = per_game_stats["REB"] / per_game_stats["GP"]
+    per_game_stats["AST"] = per_game_stats["AST"] / per_game_stats["GP"]
+    per_game_stats["STL"] = per_game_stats["STL"] / per_game_stats["GP"]
+    per_game_stats["BLK"] = per_game_stats["BLK"] / per_game_stats["GP"]
+    per_game_stats["TOV"] = per_game_stats["TOV"] / per_game_stats["GP"]
+
+    return per_game_stats
+
+
+def fetch_players_career_stats(player1_id, player2_id):
+    player1_stats = fetch_player_career_stats(player1_id)
+    player2_stats = fetch_player_career_stats(player2_id)
+    return player1_stats, player2_stats
+
+
+def get_player_options():
+    player_data = players.get_players()
+    options = [
+        {"label": player["full_name"], "value": player["id"]} for player in player_data
+    ]
+    return options
 
 
 def fetch_league_player_stats(season="2023-24"):

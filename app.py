@@ -2,11 +2,15 @@ import dash
 import dash_core_components as dcc
 from dash import html
 from dash.dependencies import Input, Output
+import pandas as pd
+import plotly.express as px
 
 from screens.team_performance import team_performance_layout
 from screens.player_similarity import player_similarity_layout
+from data.fetch_data import fetch_players_career_stats, get_player_options
+from screens.player_similarity import calculate_similarity
 
-app = dash.Dash(__name__)
+app = dash.Dash(__name__, suppress_callback_exceptions=True)
 
 app.layout = html.Div(
     [
@@ -29,7 +33,45 @@ def render_content(tab):
     if tab == "tab-1":
         return team_performance_layout()
     elif tab == "tab-2":
-        return player_similarity_layout(2544)  # Example player_id for LeBron James
+        return player_similarity_layout()
+
+
+@app.callback(
+    [Output("similarity-output", "children"), Output("similarity-graph", "figure")],
+    [Input("submit-button", "n_clicks")],
+    [Input("player1_name", "value"), Input("player2_name", "value")],
+)
+def update_similarity(n_clicks, player1_id, player2_id):
+    if not player1_id or not player2_id:
+        return "Please select both players", {}
+
+    player1_stats, player2_stats = fetch_players_career_stats(player1_id, player2_id)
+    similarity_percentile, player1_mean_stats, player2_mean_stats = (
+        calculate_similarity(player1_stats, player2_stats)
+    )
+
+    # Get player names
+    player_options = get_player_options()
+    player1_name = next(
+        item["label"] for item in player_options if item["value"] == player1_id
+    )
+    player2_name = next(
+        item["label"] for item in player_options if item["value"] == player2_id
+    )
+
+    # Create a DataFrame for visualization
+    data = pd.DataFrame(
+        {
+            "Metric": player1_mean_stats.index,
+            player1_name: player1_mean_stats.values,
+            player2_name: player2_mean_stats.values,
+        }
+    )
+
+    fig = px.bar(data, x="Metric", y=[player1_name, player2_name], barmode="group")
+
+    similarity_output = f"Player Similarity: {similarity_percentile:.2f}%"
+    return similarity_output, fig
 
 
 if __name__ == "__main__":
