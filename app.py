@@ -1,14 +1,17 @@
 import dash
 import dash_core_components as dcc
-from dash import html
-from dash.dependencies import Input, Output
 import pandas as pd
 import plotly.express as px
+from dash import html
+from dash.dependencies import Input, Output, State
 
+from data.fetch_data import (
+    fetch_players_career_stats,
+    get_player_options,
+    fetch_team_performance_data,
+)
+from screens.player_similarity import calculate_similarity, player_similarity_layout
 from screens.team_performance import team_performance_layout
-from screens.player_similarity import player_similarity_layout
-from data.fetch_data import fetch_players_career_stats, get_player_options
-from screens.player_similarity import calculate_similarity
 
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
 
@@ -28,12 +31,42 @@ app.layout = html.Div(
 )
 
 
-@app.callback(Output("tabs-content", "children"), Input("tabs", "value"))
+@app.callback(
+    Output("tabs-content", "children"),
+    Input("tabs", "value"),
+)
 def render_content(tab):
     if tab == "tab-1":
         return team_performance_layout()
     elif tab == "tab-2":
         return player_similarity_layout()
+
+
+@app.callback(
+    Output("season-dropdown", "options"),
+    [Input("add-season-button", "n_clicks")],
+    [State("new-season-input", "value"), State("season-dropdown", "options")],
+)
+def update_season_options(n_clicks, new_season, options):
+    if n_clicks > 0 and new_season:
+        if {"label": new_season, "value": new_season} not in options:
+            options.append({"label": new_season, "value": new_season})
+    return options
+
+
+@app.callback(
+    Output("team-performance-graph", "figure"),
+    [Input("season-dropdown", "value")],
+)
+def update_team_performance_graph(selected_seasons):
+    if not selected_seasons:
+        return px.scatter()  # Return an empty figure if no seasons are selected
+
+    data = fetch_team_performance_data(selected_seasons)
+    fig = px.scatter(
+        data, x="WINS", y="LOSSES", color="cluster", hover_data=["TEAM_ID", "TEAM_NAME"]
+    )
+    return fig
 
 
 @app.callback(
