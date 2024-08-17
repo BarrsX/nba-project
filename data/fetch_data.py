@@ -2,6 +2,7 @@ from nba_api.stats.endpoints import (
     leaguegamefinder,
     playercareerstats,
     leaguedashplayerstats,
+    shotchartdetail,
 )
 from nba_api.stats.static import teams
 from nba_api.stats.static import players
@@ -12,7 +13,6 @@ import pandas as pd
 
 
 def fetch_team_performance_data(seasons=["2023-24"]):
-    print("Fetching team performance data for seasons:", seasons)
     all_games = []
 
     for season in seasons:
@@ -115,3 +115,30 @@ def get_player_options():
 def fetch_league_player_stats(season="2023-24"):
     player_stats = leaguedashplayerstats.LeagueDashPlayerStats(season=season)
     return player_stats.get_data_frames()[0]
+
+
+def fetch_shot_data(player_id, season="2023-24", game_id=None):
+    shotchart = shotchartdetail.ShotChartDetail(
+        team_id=0,
+        player_id=player_id,
+        season_nullable=season,
+        game_id_nullable=game_id,
+        season_type_all_star="Regular Season",
+    )
+    shot_data = shotchart.get_data_frames()[0]
+    print(shot_data)
+    return shot_data
+
+
+def fetch_game_options(player_id, season="2023-24"):
+    gamefinder = leaguegamefinder.LeagueGameFinder(
+        player_id_nullable=player_id,
+        season_nullable=season,
+        season_type_nullable="Regular Season",
+    )
+    games = gamefinder.get_data_frames()[0]
+    game_options = [
+        {"label": f"{row['MATCHUP']} - {row['GAME_DATE']}", "value": row["GAME_ID"]}
+        for _, row in games.iterrows()
+    ]
+    return game_options

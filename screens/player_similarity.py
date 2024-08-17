@@ -1,4 +1,4 @@
-import dash_core_components as dcc
+from dash import dcc
 from dash import html
 import plotly.express as px
 from data.fetch_data import get_player_options

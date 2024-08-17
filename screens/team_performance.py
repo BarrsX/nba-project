@@ -1,4 +1,4 @@
-import dash_core_components as dcc
+from dash import dcc
 import plotly.express as px
 from dash import html
 

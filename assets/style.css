@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+/* Style for the input field */
+#new-season-input {
+    width: 200px;
+    padding: 10px;
+    margin-right: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Style for the button */
+#add-season-button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#add-season-button:hover {
+    background-color: #0056b3;
+}
+
+/* Apply the Roboto font to headers and tab labels */
+h1, h2, h3, h4, h5, h6, .tab-label {
+    font-family: 'Roboto', sans-serif;
+}
