@@ -70,10 +70,18 @@ def render_content(tab):
     [
         State("new-season-input", "value"),
         State("season-dropdown", "options"),
+        State("player-dropdown", "options"),
     ],
 )
 def update_shot_charts_and_seasons(
-    active_tab, player_id, season, game_id, n_clicks, new_season, season_options
+    active_tab,
+    player_id,
+    season,
+    game_id,
+    n_clicks,
+    new_season,
+    season_options,
+    player_options,
 ):
     if active_tab != "tab-3":  # Only update when Shot Chart tab is active
         return dash.no_update, dash.no_update, dash.no_update
@@ -97,6 +105,22 @@ def update_shot_charts_and_seasons(
         return px.scatter(), game_options, season_options
 
     shot_data = fetch_shot_data(player_id, season, game_id)
+
+    # Get player name
+    player_name = next(
+        (player["label"] for player in player_options if player["value"] == player_id),
+        "Unknown Player",
+    )
+
+    # Get game date from game options
+    game_date = next(
+        (
+            option["label"].split(" - ")[1]
+            for option in game_options
+            if option["value"] == game_id
+        ),
+        "Unknown Date",
+    )
 
     shot_chart = go.Figure()
 
@@ -142,9 +166,11 @@ def update_shot_charts_and_seasons(
         )
     )
 
+    print(f"Player Name: {player_name}, Game Date: {game_date}")
+
     # Update layout
     shot_chart.update_layout(
-        title="Shot Chart",
+        title=f"Shot Chart: {player_name} - {game_date}",
         xaxis=dict(range=[-250, 250], showgrid=False, zeroline=False, visible=False),
         yaxis=dict(range=[-52, 422.5], showgrid=False, zeroline=False, visible=False),
         yaxis_scaleanchor="x",
