@@ -9,18 +9,14 @@ def shot_chart_layout():
     player_options = get_player_options()
     layout = html.Div(
         [
-            html.H1("Shot Chart Analysis", style={"textAlign": "center"}),
+            html.H1("Shot Chart Analysis", className="text-center"),
             html.Div(
                 [
                     dcc.Dropdown(
                         id="player-dropdown",
                         options=player_options,
                         placeholder="Select Player",
-                        style={
-                            "width": "30%",
-                            "display": "inline-block",
-                            "marginRight": "10px",
-                        },
+                        className="input-element",
                     ),
                     dcc.Dropdown(
                         id="season-dropdown",
@@ -29,23 +25,31 @@ def shot_chart_layout():
                             for season in ["2023-24", "2022-23", "2021-22"]
                         ],
                         placeholder="Select Season",
-                        style={
-                            "width": "30%",
-                            "display": "inline-block",
-                            "marginRight": "10px",
-                        },
+                        className="input-element",
                     ),
-                    dcc.Dropdown(
-                        id="game-dropdown",
-                        placeholder="Select Game",
-                        style={"width": "30%", "display": "inline-block"},
+                    dcc.Input(
+                        id="new-season-input",
+                        type="text",
+                        placeholder="Enter new season (e.g., 2024-25)",
+                        className="input-element",
+                    ),
+                    html.Button(
+                        "Add Season",
+                        id="add-season-button",
+                        n_clicks=0,
+                        className="input-element",
                     ),
                 ],
-                style={"textAlign": "center", "marginBottom": "20px"},
+                className="input-container",
+            ),
+            dcc.Dropdown(
+                id="game-dropdown",
+                placeholder="Select Game",
+                className="game-dropdown",
             ),
             html.Div(
-                [dcc.Graph(id="shot-chart", style={"height": "80vh"})],
-                style={"width": "100%", "display": "flex", "justifyContent": "center"},
+                [dcc.Graph(id="shot-chart", className="shot-chart-graph")],
+                className="chart-container",
             ),
         ]
     )

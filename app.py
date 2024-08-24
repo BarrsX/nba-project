@@ -55,15 +55,118 @@ def render_content(tab):
 
 
 @app.callback(
-    Output("season-dropdown", "options"),
-    [Input("add-season-button", "n_clicks")],
-    [State("new-season-input", "value"), State("season-dropdown", "options")],
+    [
+        Output("shot-chart", "figure"),
+        Output("game-dropdown", "options"),
+        Output("season-dropdown", "options"),
+    ],
+    [
+        Input("tabs", "value"),
+        Input("player-dropdown", "value"),
+        Input("season-dropdown", "value"),
+        Input("game-dropdown", "value"),
+        Input("add-season-button", "n_clicks"),
+    ],
+    [
+        State("new-season-input", "value"),
+        State("season-dropdown", "options"),
+    ],
 )
-def update_season_options(n_clicks, new_season, options):
-    if n_clicks > 0 and new_season:
-        if {"label": new_season, "value": new_season} not in options:
-            options.append({"label": new_season, "value": new_season})
-    return options
+def update_shot_charts_and_seasons(
+    active_tab, player_id, season, game_id, n_clicks, new_season, season_options
+):
+    if active_tab != "tab-3":  # Only update when Shot Chart tab is active
+        return dash.no_update, dash.no_update, dash.no_update
+
+    ctx = dash.callback_context
+    triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    # Handle adding new season
+    if triggered_id == "add-season-button" and new_season:
+        if {"label": new_season, "value": new_season} not in season_options:
+            season_options.append({"label": new_season, "value": new_season})
+        return dash.no_update, dash.no_update, season_options
+
+    # Handle updating shot chart
+    if not player_id or not season:
+        return px.scatter(), [], season_options
+
+    game_options = fetch_game_options(player_id, season)
+
+    if not game_id:
+        return px.scatter(), game_options, season_options
+
+    shot_data = fetch_shot_data(player_id, season, game_id)
+
+    shot_chart = go.Figure()
+
+    # Add court image
+    shot_chart.add_layout_image(
+        dict(
+            source=app.get_asset_url("shot_chart.png"),
+            xref="x",
+            yref="y",
+            x=-250,
+            y=422.5,
+            sizex=500,
+            sizey=470,
+            sizing="stretch",
+            opacity=1,
+            layer="below",
+        )
+    )
+
+    # Add made shots
+    shot_chart.add_trace(
+        go.Scatter(
+            x=shot_data[shot_data["SHOT_MADE_FLAG"] == 1]["LOC_X"],
+            y=shot_data[shot_data["SHOT_MADE_FLAG"] == 1]["LOC_Y"],
+            mode="markers",
+            marker=dict(size=8, color="green", symbol="circle"),
+            name="Made Shot",
+            text="Made Shot",
+            hoverinfo="text",
+        )
+    )
+
+    # Add missed shots
+    shot_chart.add_trace(
+        go.Scatter(
+            x=shot_data[shot_data["SHOT_MADE_FLAG"] == 0]["LOC_X"],
+            y=shot_data[shot_data["SHOT_MADE_FLAG"] == 0]["LOC_Y"],
+            mode="markers",
+            marker=dict(size=8, color="red", symbol="x"),
+            name="Missed Shot",
+            text="Missed Shot",
+            hoverinfo="text",
+        )
+    )
+
+    # Update layout
+    shot_chart.update_layout(
+        title="Shot Chart",
+        xaxis=dict(range=[-250, 250], showgrid=False, zeroline=False, visible=False),
+        yaxis=dict(range=[-52, 422.5], showgrid=False, zeroline=False, visible=False),
+        yaxis_scaleanchor="x",
+        yaxis_scaleratio=1,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        width=600,
+        height=564,
+        margin=dict(l=0, r=100, t=30, b=0),
+        legend=dict(
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.05,
+            bgcolor="rgba(255, 255, 255, 0.8)",
+            bordercolor="rgba(0, 0, 0, 0.3)",
+            borderwidth=1,
+        ),
+        legend_title_text="Shot Outcome",
+    )
+
+    return shot_chart, game_options, season_options
 
 
 @app.callback(
@@ -117,104 +220,6 @@ def update_similarity(n_clicks, player1_id, player2_id):
 
     similarity_output = f"Player Similarity: {similarity_percentile:.2f}%"
     return similarity_output, fig
-
-
-@app.callback(
-    [Output("shot-chart", "figure"), Output("game-dropdown", "options")],
-    [
-        Input("player-dropdown", "value"),
-        Input("season-dropdown", "value"),
-        Input("game-dropdown", "value"),
-    ],
-)
-def update_shot_charts(player_id, season, game_id):
-    if not player_id or not season:
-        return px.scatter(), []
-
-    game_options = fetch_game_options(player_id, season)
-
-    if not game_id:
-        return px.scatter(), game_options
-
-    shot_data = fetch_shot_data(player_id, season, game_id)
-
-    shot_chart = go.Figure()
-
-    # Add court image
-    shot_chart.add_layout_image(
-        dict(
-            source=app.get_asset_url("shot_chart.png"),
-            xref="x",
-            yref="y",
-            x=-250,
-            y=422.5,
-            sizex=500,
-            sizey=470,
-            sizing="stretch",
-            opacity=1,
-            layer="below",
-        )
-    )
-
-    # Add shot data
-    shot_chart.add_trace(
-        go.Scatter(
-            x=shot_data["LOC_X"],
-            y=shot_data["LOC_Y"],
-            mode="markers",
-            marker=dict(
-                size=8,
-                color=shot_data["SHOT_MADE_FLAG"].map({0: "red", 1: "green"}),
-                symbol=shot_data["SHOT_MADE_FLAG"].map({0: "x", 1: "circle"}),
-            ),
-            text=shot_data["SHOT_MADE_FLAG"].map({0: "Missed Shot", 1: "Made Shot"}),
-            hoverinfo="text",
-            showlegend=False,
-        )
-    )
-
-    # Update layout
-    shot_chart.update_layout(
-        title="Shot Chart",
-        xaxis=dict(range=[-250, 250], showgrid=False, zeroline=False, visible=False),
-        yaxis=dict(range=[-52, 422.5], showgrid=False, zeroline=False, visible=False),
-        yaxis_scaleanchor="x",
-        yaxis_scaleratio=1,
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        width=600,
-        height=564,
-        margin=dict(l=0, r=0, t=30, b=0),
-    )
-
-    # Add custom legend
-    shot_chart.add_trace(
-        go.Scatter(
-            x=[None],
-            y=[None],
-            mode="markers",
-            marker=dict(size=10, color="green", symbol="circle"),
-            name="Made Shot",
-            showlegend=True,
-        )
-    )
-    shot_chart.add_trace(
-        go.Scatter(
-            x=[None],
-            y=[None],
-            mode="markers",
-            marker=dict(size=10, color="red", symbol="x"),
-            name="Missed Shot",
-            showlegend=True,
-        )
-    )
-
-    shot_chart.update_layout(
-        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
-        legend_title_text="Shot Outcome",
-    )
-
-    return shot_chart, game_options
 
 
 if __name__ == "__main__":
