@@ -123,6 +123,7 @@ def fetch_shot_data(player_id, season="2023-24", game_id=None):
         player_id=player_id,
         season_nullable=season,
         game_id_nullable=game_id,
+        context_measure_simple="FGA",
         season_type_all_star="Regular Season",
     )
     shot_data = shotchart.get_data_frames()[0]

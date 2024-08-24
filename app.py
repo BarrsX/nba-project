@@ -145,7 +145,7 @@ def update_shot_charts(player_id, season, game_id):
             px.scatter(),
             px.density_heatmap(),
             game_options,
-        )  # Return empty figures if no game is selected
+        )
 
     shot_data = fetch_shot_data(player_id, season, game_id)
 
@@ -161,10 +161,54 @@ def update_shot_charts(player_id, season, game_id):
             "LOC_Y": "Y Coordinate",
             "SHOT_MADE_FLAG": "Shot Made",
         },
-        color_discrete_map={
-            1: "green",
-            0: "red",
-        },  # Map made shots to green and missed shots to red
+        hover_data={
+            "SHOT_MADE_FLAG": False,
+            "LOC_X": False,
+            "LOC_Y": False,
+        },
+    )
+
+    # Update marker size and ensure discrete colors
+    shot_chart.update_traces(marker=dict(size=8), selector=dict(mode="markers"))
+
+    # Remove color axis and update layout
+    shot_chart.update_layout(
+        coloraxis_showscale=False,
+        legend_title_text="Shot Outcome",
+        legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99),
+    )
+
+    # Explicitly set colors for each point
+    shot_chart.update_traces(
+        marker=dict(
+            color=shot_data["SHOT_MADE_FLAG"].map({0: "red", 1: "green"}), size=8
+        ),
+        selector=dict(mode="markers"),
+    )
+
+    # Remove existing legend items
+    shot_chart.data = [trace for trace in shot_chart.data if trace.name != "Shot Made"]
+
+    # Add custom legend items
+    shot_chart.add_trace(
+        go.Scatter(
+            x=[None],
+            y=[None],
+            mode="markers",
+            marker=dict(size=10, color="green"),
+            name="Made Shot",
+            showlegend=True,
+        )
+    )
+    shot_chart.add_trace(
+        go.Scatter(
+            x=[None],
+            y=[None],
+            mode="markers",
+            marker=dict(size=10, color="red"),
+            name="Missed Shot",
+            showlegend=True,
+        )
     )
 
     # Add basketball court image
