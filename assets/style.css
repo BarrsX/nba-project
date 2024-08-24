@@ -27,3 +27,7 @@
 h1, h2, h3, h4, h5, h6, .tab-label {
     font-family: 'Roboto', sans-serif;
 }
+
+.js-plotly-plot {
+    width: 100% !important;
+}

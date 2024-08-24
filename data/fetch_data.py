@@ -127,7 +127,6 @@ def fetch_shot_data(player_id, season="2023-24", game_id=None):
         season_type_all_star="Regular Season",
     )
     shot_data = shotchart.get_data_frames()[0]
-    print(shot_data)
     return shot_data
 
 

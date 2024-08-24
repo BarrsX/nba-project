@@ -1,3 +1,5 @@
+import os
+
 import dash
 import pandas as pd
 import plotly.express as px
@@ -118,11 +120,7 @@ def update_similarity(n_clicks, player1_id, player2_id):
 
 
 @app.callback(
-    [
-        Output("shot-chart", "figure"),
-        Output("shot-heatmap", "figure"),
-        Output("game-dropdown", "options"),
-    ],
+    [Output("shot-chart", "figure"), Output("game-dropdown", "options")],
     [
         Input("player-dropdown", "value"),
         Input("season-dropdown", "value"),
@@ -131,71 +129,71 @@ def update_similarity(n_clicks, player1_id, player2_id):
 )
 def update_shot_charts(player_id, season, game_id):
     if not player_id or not season:
-        return (
-            px.scatter(),
-            px.density_heatmap(),
-            [],
-        )  # Return empty figures and game options if no player or season is selected
+        return px.scatter(), []
 
-    # Fetch game options
     game_options = fetch_game_options(player_id, season)
 
     if not game_id:
-        return (
-            px.scatter(),
-            px.density_heatmap(),
-            game_options,
-        )
+        return px.scatter(), game_options
 
     shot_data = fetch_shot_data(player_id, season, game_id)
 
-    # Shot Chart
-    shot_chart = px.scatter(
-        shot_data,
-        x="LOC_X",
-        y="LOC_Y",
-        color="SHOT_MADE_FLAG",
-        title="Shot Chart",
-        labels={
-            "LOC_X": "X Coordinate",
-            "LOC_Y": "Y Coordinate",
-            "SHOT_MADE_FLAG": "Shot Made",
-        },
-        hover_data={
-            "SHOT_MADE_FLAG": False,
-            "LOC_X": False,
-            "LOC_Y": False,
-        },
+    shot_chart = go.Figure()
+
+    # Add court image
+    shot_chart.add_layout_image(
+        dict(
+            source=app.get_asset_url("shot_chart.png"),
+            xref="x",
+            yref="y",
+            x=-250,
+            y=422.5,
+            sizex=500,
+            sizey=470,
+            sizing="stretch",
+            opacity=1,
+            layer="below",
+        )
     )
 
-    # Update marker size and ensure discrete colors
-    shot_chart.update_traces(marker=dict(size=8), selector=dict(mode="markers"))
+    # Add shot data
+    shot_chart.add_trace(
+        go.Scatter(
+            x=shot_data["LOC_X"],
+            y=shot_data["LOC_Y"],
+            mode="markers",
+            marker=dict(
+                size=8,
+                color=shot_data["SHOT_MADE_FLAG"].map({0: "red", 1: "green"}),
+                symbol=shot_data["SHOT_MADE_FLAG"].map({0: "x", 1: "circle"}),
+            ),
+            text=shot_data["SHOT_MADE_FLAG"].map({0: "Missed Shot", 1: "Made Shot"}),
+            hoverinfo="text",
+            showlegend=False,
+        )
+    )
 
-    # Remove color axis and update layout
+    # Update layout
     shot_chart.update_layout(
-        coloraxis_showscale=False,
-        legend_title_text="Shot Outcome",
-        legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99),
+        title="Shot Chart",
+        xaxis=dict(range=[-250, 250], showgrid=False, zeroline=False, visible=False),
+        yaxis=dict(range=[-52, 422.5], showgrid=False, zeroline=False, visible=False),
+        yaxis_scaleanchor="x",
+        yaxis_scaleratio=1,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        width=600,
+        height=564,
+        margin=dict(l=0, r=0, t=30, b=0),
     )
 
-    # Explicitly set colors for each point
-    shot_chart.update_traces(
-        marker=dict(
-            color=shot_data["SHOT_MADE_FLAG"].map({0: "red", 1: "green"}), size=8
-        ),
-        selector=dict(mode="markers"),
-    )
-
-    # Remove existing legend items
-    shot_chart.data = [trace for trace in shot_chart.data if trace.name != "Shot Made"]
-
-    # Add custom legend items
+    # Add custom legend
     shot_chart.add_trace(
         go.Scatter(
             x=[None],
             y=[None],
             mode="markers",
-            marker=dict(size=10, color="green"),
+            marker=dict(size=10, color="green", symbol="circle"),
             name="Made Shot",
             showlegend=True,
         )
@@ -205,76 +203,18 @@ def update_shot_charts(player_id, season, game_id):
             x=[None],
             y=[None],
             mode="markers",
-            marker=dict(size=10, color="red"),
+            marker=dict(size=10, color="red", symbol="x"),
             name="Missed Shot",
             showlegend=True,
         )
     )
 
-    # Add basketball court image
-    court_image = "https://raw.githubusercontent.com/basketballrelativity/shot-charts/master/court.png"
     shot_chart.update_layout(
-        images=[
-            go.layout.Image(
-                source=court_image,
-                xref="x",
-                yref="y",
-                x=-250,
-                y=470,
-                sizex=500,
-                sizey=470,
-                sizing="stretch",
-                opacity=0.5,
-                layer="below",
-            )
-        ],
-        xaxis=dict(
-            range=[-250, 250], showgrid=False, zeroline=False, showticklabels=False
-        ),
-        yaxis=dict(
-            range=[-50, 470], showgrid=False, zeroline=False, showticklabels=False
-        ),
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        legend_title_text="Shot Outcome",
     )
 
-    # Shot Heatmap
-    shot_heatmap = px.density_heatmap(
-        shot_data,
-        x="LOC_X",
-        y="LOC_Y",
-        z="SHOT_MADE_FLAG",
-        title="Shot Heatmap",
-        labels={
-            "LOC_X": "X Coordinate",
-            "LOC_Y": "Y Coordinate",
-            "SHOT_MADE_FLAG": "Shot Made",
-        },
-    )
-
-    # Add basketball court image to heatmap
-    shot_heatmap.update_layout(
-        images=[
-            go.layout.Image(
-                source=court_image,
-                xref="x",
-                yref="y",
-                x=-250,
-                y=470,
-                sizex=500,
-                sizey=470,
-                sizing="stretch",
-                opacity=0.5,
-                layer="below",
-            )
-        ],
-        xaxis=dict(
-            range=[-250, 250], showgrid=False, zeroline=False, showticklabels=False
-        ),
-        yaxis=dict(
-            range=[-50, 470], showgrid=False, zeroline=False, showticklabels=False
-        ),
-    )
-
-    return shot_chart, shot_heatmap, game_options
+    return shot_chart, game_options
 
 
 if __name__ == "__main__":
